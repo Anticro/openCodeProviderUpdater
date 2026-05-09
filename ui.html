@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCode Provider Updater</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: #ffffff;
+        color: #1a1a1a;
+        min-height: 100vh;
+        padding: 2rem;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 {
+        color: #2a2a2a;
+        font-size: 1.8rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .error-banner {
+        background: #e94560;
+        color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    .success-banner {
+        background: #2ecc71;
+        color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    .provider-card {
+        background: #f2f2f2;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid #d8d8d8;
+    }
+    .provider-card .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    .provider-card .name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    .provider-card .key {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 0.2rem;
+    }
+    .provider-card .address {
+        font-size: 0.85rem;
+        color: #555;
+        margin-bottom: 0.75rem;
+        word-break: break-all;
+    }
+    .provider-card .models-section .models-label {
+        font-size: 0.85rem;
+        color: #555;
+        margin-bottom: 0.4rem;
+    }
+    .provider-card .models-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    .provider-card .model-tag {
+        background: #dbeafe;
+        color: #1e3a5f;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+    .provider-card .models-empty {
+        color: #999;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+    .provider-card .actions {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    .btn {
+        padding: 0.5rem 1.2rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background 0.2s, opacity 0.2s;
+        background: #2ecc71;
+        color: #fff;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { background: #27ae60; }
+    .btn-add { width: 100%; padding: 0.75rem; margin-top: 0.5rem; }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+        background: #ffffff;
+        padding: 2rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 450px;
+        border: 1px solid #d8d8d8;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+    }
+    .modal h2 {
+        color: #1a1a1a;
+        margin-bottom: 1.25rem;
+    }
+    .modal label {
+        display: block;
+        font-size: 0.85rem;
+        color: #444;
+        margin-bottom: 0.3rem;
+    }
+    .modal input {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        border: 1px solid #d0d0d0;
+        border-radius: 8px;
+        background: #fafafa;
+        color: #1a1a1a;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+    .modal input:focus { outline: none; border-color: #2ecc71; }
+    .modal .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+    .loading {
+        text-align: center;
+        color: #888;
+        padding: 3rem;
+        font-size: 1.1rem;
+    }
+    .empty {
+        text-align: center;
+        color: #999;
+        padding: 3rem;
+        font-style: italic;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>OpenCode Provider Updater</h1>
+    <div id="errorBanner" class="error-banner"></div>
+    <div id="successBanner" class="success-banner"></div>
+    <div id="providersContainer">
+        <div class="loading">Loading providers...</div>
+    </div>
+    <button class="btn btn-add" onclick="openAddModal()">+ Add New Provider</button>
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h2>Add New Provider</h2>
+        <label for="addBaseURL">Base URL</label>
+        <input id="addBaseURL" type="text" placeholder="http://localhost:11434">
+        <label for="addName">Display Name</label>
+        <input id="addName" type="text" placeholder="Ollama Local">
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
+            <button class="btn btn-save" id="saveAddBtn" onclick="handleAdd()">Add Provider</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let providers = [];
+
+async function loadProviders() {
+    const container = document.getElementById('providersContainer');
+    const errorBanner = document.getElementById('errorBanner');
+    errorBanner.style.display = 'none';
+    container.innerHTML = '<div class="loading">Loading providers...</div>';
+
+    try {
+        const resp = await fetch('/api/providers');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        providers = await resp.json();
+        renderProviders();
+    } catch (err) {
+        errorBanner.textContent = 'Failed to load providers: ' + err.message;
+        errorBanner.style.display = 'block';
+        container.innerHTML = '<div class="empty">Could not load providers</div>';
+    }
+}
+
+function renderProviders() {
+    const container = document.getElementById('providersContainer');
+
+    if (providers.length === 0) {
+        container.innerHTML = '<div class="empty">No providers configured</div>';
+        return;
+    }
+
+    container.innerHTML = providers.map(p => `
+        <div class="provider-card" data-key="${escapeHtml(p.key)}">
+            <div class="header">
+                <div>
+                    <div class="name">${escapeHtml(p.name || p.key)}</div>
+                    <div class="key">Key: ${escapeHtml(p.key)}</div>
+                </div>
+            </div>
+            <div class="address">${escapeHtml(p.baseURL || 'No address')}</div>
+            <div class="models-section">
+                <div class="models-label">Models (${(p.models || []).length})</div>
+                <div class="models-list">
+                    ${(p.models || []).length === 0
+                        ? '<div class="models-empty">No models installed</div>'
+                        : (p.models || []).map(m => '<span class="model-tag">' + escapeHtml(m) + '</span>').join('')
+                    }
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-update" onclick="handleUpdate('${escapeHtml(p.key)}', this)">Update</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function handleUpdate(key, btn) {
+    const errorBanner = document.getElementById('errorBanner');
+    const successBanner = document.getElementById('successBanner');
+    errorBanner.style.display = 'none';
+    successBanner.style.display = 'none';
+
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+
+    try {
+        const resp = await fetch('/api/providers/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: key })
+        });
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.error || 'HTTP ' + resp.status);
+        }
+        const updated = await resp.json();
+
+        const idx = providers.findIndex(p => p.key === key);
+        if (idx !== -1) providers[idx] = updated;
+
+        renderProviders();
+        successBanner.textContent = 'Provider "' + (updated.name || updated.key) + '" updated successfully';
+        successBanner.style.display = 'block';
+        setTimeout(() => { successBanner.style.display = 'none'; }, 3000);
+    } catch (err) {
+        errorBanner.textContent = 'Update failed: ' + err.message;
+        errorBanner.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Update';
+    }
+}
+
+function openAddModal() {
+    document.getElementById('addModal').classList.add('active');
+    document.getElementById('addBaseURL').value = '';
+    document.getElementById('addName').value = '';
+    document.getElementById('addBaseURL').focus();
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').classList.remove('active');
+}
+
+async function handleAdd() {
+    const baseURL = document.getElementById('addBaseURL').value.trim();
+    const name = document.getElementById('addName').value.trim();
+    const errorBanner = document.getElementById('errorBanner');
+    const successBanner = document.getElementById('successBanner');
+    const saveBtn = document.getElementById('saveAddBtn');
+
+    errorBanner.style.display = 'none';
+    successBanner.style.display = 'none';
+
+    if (!baseURL) {
+        errorBanner.textContent = 'Please enter a base URL';
+        errorBanner.style.display = 'block';
+        return;
+    }
+    if (!name) {
+        errorBanner.textContent = 'Please enter a display name';
+        errorBanner.style.display = 'block';
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Adding...';
+
+    try {
+        const resp = await fetch('/api/providers/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseURL: baseURL, name: name })
+        });
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.error || 'HTTP ' + resp.status);
+        }
+        const newProvider = await resp.json();
+
+        providers.push(newProvider);
+        closeAddModal();
+        renderProviders();
+        successBanner.textContent = 'Provider "' + (newProvider.name || newProvider.key) + '" added successfully';
+        successBanner.style.display = 'block';
+        setTimeout(() => { successBanner.style.display = 'none'; }, 3000);
+    } catch (err) {
+        errorBanner.textContent = 'Add failed: ' + err.message;
+        errorBanner.style.display = 'block';
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Add Provider';
+    }
+}
+
+function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', loadProviders);
+
+window.addEventListener("beforeunload", function (e) {
+  navigator.sendBeacon('/api/shutdown');
+});
+</script>
+</body>
+</html>
